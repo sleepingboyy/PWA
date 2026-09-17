@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengumpulan Tugas - Sekarmaji Hukman Adala Hamdani</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="bg-slate-100 text-slate-800 min-h-screen p-4 sm:p-8 font-sans">
+
+    <div class="max-w-3xl mx-auto bg-white border border-slate-200 rounded-lg p-6 sm:p-10 shadow-sm">
+
+        <!-- Header -->
+        <header class="border-b border-slate-200 pb-5 mb-8">
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900">Pengumpulan Tugas</h1>
+            <p class="text-sm font-medium text-slate-500 mt-1">Sekarmaji Hukman Adala Hamdani &bull; NIM: 1247050124</p>
+        </header>
+
+        <!-- Form Input -->
+        <section class="mb-10">
+            <form id="tugasForm" class="space-y-5">
+                <div>
+                    <label for="judul"
+                        class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Judul
+                        Tugas</label>
+                    <input type="text" id="judul" required placeholder="Masukkan judul tugas"
+                        class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-800 focus:border-slate-800 transition">
+                </div>
+
+                <div>
+                    <label for="deskripsi"
+                        class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Deskripsi /
+                        Catatan (Opsional)</label>
+                    <textarea id="deskripsi" rows="3" placeholder="Catatan tambahan mengenai tugas"
+                        class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-800 focus:border-slate-800 transition"></textarea>
+                </div>
+
+                <div>
+                    <label for="file_tugas"
+                        class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">File
+                        Berkas</label>
+                    <input type="file" id="file_tugas" required
+                        class="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 file:cursor-pointer border border-slate-300 rounded bg-slate-50 p-1">
+                </div>
+
+                <button type="submit" id="submitBtn"
+                    class="w-full py-2.5 px-4 bg-slate-900 text-white text-sm font-medium rounded hover:bg-slate-800 transition duration-150">
+                    Unggah Tugas
+                </button>
+            </form>
+        </section>
+
+        <hr class="border-slate-200 mb-8">
+
+        <!-- List Tugas -->
+        <section>
+            <h2 class="text-lg font-semibold text-slate-900 mb-4">Daftar Berkas Terunggah</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead>
+                        <tr
+                            class="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                            <th class="p-3">Judul Tugas</th>
+                            <th class="p-3">Tanggal Unggah</th>
+                            <th class="p-3 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tugasTableBody" class="divide-y divide-slate-100">
+                        <tr>
+                            <td colspan="3" class="p-4 text-center text-slate-400">Memuat data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Script Supabase -->
+    <script>
+        // MASUKKAN KREDENSIAL SUPABASE ANDA DI SINI
+        const SUPABASE_URL = 'https://dredbtdisizkuprcvmea.supabase.co/rest/v1/';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyZWRidGRpc2l6a3VwcmN2bWVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk2Mzc5MTAsImV4cCI6MjEwNTIxMzkxMH0.bcaGwVXvZQDz5SnJaX7RqVXsT0o5f5RcrzOIoHaPSeg';
+
+        // Inisialisasi Supabase Client
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const form = document.getElementById('tugasForm');
+        const tableBody = document.getElementById('tugasTableBody');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Fetch & Tampilkan Data Tugas
+        async function loadTugas() {
+            const { data, error } = await supabaseClient
+                .from('tugas')
+                .select('id, judul, deskripsi, file_url, created_at')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching data:', error);
+                tableBody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-red-600">Gagal memuat data: ${error.message}</td></tr>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400">Belum ada berkas tugas yang diunggah.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = '';
+            data.forEach(item => {
+                const dateObj = new Date(item.created_at);
+                const formattedDate = dateObj.toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                });
+
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50 transition';
+                row.innerHTML = `
+          <td class="p-3">
+            <div class="font-medium text-slate-900">${item.judul}</div>
+            ${item.deskripsi ? `<div class="text-xs text-slate-500 mt-0.5">${item.deskripsi}</div>` : ''}
+          </td>
+          <td class="p-3 text-xs text-slate-500">${formattedDate}</td>
+          <td class="p-3 text-right">
+            <a href="${item.file_url}" target="_blank" class="inline-block px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium rounded border border-slate-300 transition">
+              Buka File
+            </a>
+          </td>
+        `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Submit Form & Upload File
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Mengunggah...';
+
+            const judul = document.getElementById('judul').value;
+            const deskripsi = document.getElementById('deskripsi').value;
+            const fileInput = document.getElementById('file_tugas');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Pilih file berkas terlebih dahulu.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Unggah Tugas';
+                return;
+            }
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+            // 1. Upload ke Storage Bucket
+            const { error: storageError } = await supabaseClient.storage
+                .from('tugas-bucket')
+                .upload(fileName, file);
+
+            if (storageError) {
+                alert('Gagal mengunggah file: ' + storageError.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Unggah Tugas';
+                return;
+            }
+
+            // 2. Ambil Public URL
+            const { data: urlData } = supabaseClient.storage
+                .from('tugas-bucket')
+                .getPublicUrl(fileName);
+
+            const publicUrl = urlData.publicUrl;
+
+            // 3. Simpan Ke Database (Mengisi dummy nilai pada kolom lama agar tidak error)
+            const { error: dbError } = await supabaseClient
+                .from('tugas')
+                .insert([{
+                    judul: judul,
+                    deskripsi: deskripsi,
+                    file_name: file.name,
+                    file_url: publicUrl,
+                    matakuliah: '-',
+                    deadline: new Date().toISOString().split('T')[0]
+                }]);
+
+            if (dbError) {
+                alert('Gagal menyimpan ke database: ' + dbError.message);
+            } else {
+                form.reset();
+                loadTugas();
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Unggah Tugas';
+        });
+
+        loadTugas();
+    </script>
+</body>
+
+</html>
